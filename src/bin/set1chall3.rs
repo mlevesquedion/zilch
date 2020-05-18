@@ -11,13 +11,8 @@ fn main() {
             );
             zilch::bits2str(&zilch::xor(&ciphertext, &chars))
         })
-        .map(|c| {
-            println!("({}, {})", c, zilch::english_frequency_diff(&c));
-            c
-        })
-        .collect::<Vec<_>>();
-    // .min_by_key(|message| zilch::english_frequency_diff(&message))
-    // .unwrap();
+        .min_by_key(|message| zilch::english_frequency_diff(&message))
+        .unwrap();
 
-    // println!("{}", plaintext);
+    println!("{}", plaintext);
 }

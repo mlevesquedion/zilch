@@ -1,8 +1,8 @@
 // normalized freqs, from A to Z
 const ENGLISH_FREQUENCIES: [f32; 26] = [
-    8.4966, 2.072, 4.5388, 3.3844, 11.160, 1.812, 2.470, 3.003, 7.5448, 0.196, 1.101, 5.4893, 3.01,
-    6.6544, 7.1635, 3.1671, 0.19, 7.5809, 5.7351, 6.9509, 3.6308, 1.007, 1.289, 0.290, 1.777,
-    0.272,
+    0.084966, 0.02072, 0.045388, 0.033844, 0.1116, 0.01812, 0.0247, 0.03003, 0.075448, 0.00196,
+    0.01101, 0.054893, 0.0301, 0.066544, 0.071635, 0.031671, 0.0019, 0.075809, 0.057351, 0.069509,
+    0.036308, 0.01007, 0.01289, 0.0029, 0.01777, 0.00272,
 ];
 
 fn is_alpha(c: char) -> bool {
@@ -29,10 +29,11 @@ fn letter_frequencies(text: &str) -> [f32; 26] {
     frequencies
 }
 
-pub fn english_frequency_diff(text: &str) -> f32 {
-    ENGLISH_FREQUENCIES
+pub fn english_frequency_diff(text: &str) -> u8 {
+    (ENGLISH_FREQUENCIES
         .iter()
         .zip(letter_frequencies(text).iter())
         .map(|(f1, f2)| (f1 - f2).abs())
         .sum::<f32>()
+        * 100.0) as u8
 }

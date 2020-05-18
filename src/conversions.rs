@@ -6,6 +6,29 @@ const BASE64_TABLE: [char; 64] = [
 ];
 const PADDING: char = '=';
 
+pub fn hex2byte(hex: char) -> u8 {
+    match hex {
+        '0'..='9' => hex as u8 - ('0' as u8),
+        'a'..='f' => hex as u8 - ('a' as u8) + 10,
+        _ => panic!("invalid hex: {}", hex),
+    }
+}
+
+pub fn hex2bytes(hex: &str) -> Vec<u8> {
+    assert!(hex.len() % 2 == 0);
+
+    hex.chars()
+        .collect::<Vec<char>>()
+        .chunks_exact(2)
+        .map(|pair| (hex2byte(pair[0]) << 4) + hex2byte(pair[1]))
+        .collect()
+}
+
+#[test]
+fn test_hex2bytes() {
+    assert_eq!(hex2bytes("2af3"), vec![0b00101010, 0b11110011]);
+}
+
 pub fn hex2bits(hex: &str) -> String {
     hex.chars()
         .map(|c| match c.to_ascii_lowercase() {
@@ -75,7 +98,7 @@ mod rpad_tests {
     use super::*;
 
     #[test]
-    fn test_rpad_no_PADDING() {
+    fn test_rpad_no_padding() {
         assert_eq!(rpad(vec![1, 2, 3], 2, 0), vec![1, 2, 3]);
     }
 

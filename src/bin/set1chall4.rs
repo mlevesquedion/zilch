@@ -11,7 +11,7 @@ fn brute_force(ciphertext: &str) -> String {
             );
             zilch::bytes2str(&zilch::xor(&ciphertext, &chars))
         })
-        .min_by_key(|message| zilch::english_frequency_diff(&message))
+        .max_by_key(|message| zilch::english_score(&message))
         .unwrap()
 }
 
@@ -19,12 +19,8 @@ fn main() {
     let plaintext = fs::read_to_string("4.txt")
         .unwrap()
         .lines()
-        .map(|line| {
-            let plain = brute_force(line);
-            println!("{}", plain);
-            plain
-        })
-        .min_by_key(|message| zilch::english_frequency_diff(&message))
+        .map(brute_force)
+        .max_by_key(|message| zilch::english_score(&message))
         .unwrap();
 
     println!("{}", plaintext);

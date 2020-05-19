@@ -11,7 +11,7 @@ fn main() {
             );
             zilch::bytes2str(&zilch::xor(&ciphertext, &chars))
         })
-        .min_by_key(|message| zilch::english_frequency_diff(&message))
+        .max_by_key(|message| zilch::english_score(&message))
         .unwrap();
 
     println!("{}", plaintext);

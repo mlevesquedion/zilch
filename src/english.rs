@@ -5,6 +5,14 @@ const ENGLISH_FREQUENCIES: [f32; 26] = [
     0.036308, 0.01007, 0.01289, 0.0029, 0.01777, 0.00272,
 ];
 
+const ENGLISH_CHARACTERS: [char; 86] = [
+    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's',
+    't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+    'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '!', '"', '#', '$', '%',
+    '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[',
+    '\\', ']', '^', '_', '`', '{', '|', '}', '~', ' ', '\n',
+];
+
 fn is_alpha(c: char) -> bool {
     c.is_alphabetic() && c as u8 <= 122
 }
@@ -29,8 +37,13 @@ fn letter_frequencies(text: &str) -> [f32; 26] {
     frequencies
 }
 
-pub fn english_frequency_diff(text: &str) -> u8 {
-    (ENGLISH_FREQUENCIES
+// A measure of how "English" a string of characters seems
+pub fn english_score(text: &str) -> u8 {
+    if text.chars().any(|c| !ENGLISH_CHARACTERS.contains(&c)) {
+        return 0;
+    }
+
+    255 - (ENGLISH_FREQUENCIES
         .iter()
         .zip(letter_frequencies(text).iter())
         .map(|(f1, f2)| (f1 - f2).abs())

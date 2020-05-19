@@ -1,10 +1,12 @@
-const BASE64_TABLE: [char; 64] = [
+#![allow(dead_code)]
+
+const BASE64_TABLE: [char; 65] = [
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
     'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l',
     'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4',
-    '5', '6', '7', '8', '9', '+', '/',
+    '5', '6', '7', '8', '9', '+', '/', '=',
 ];
-const PADDING: char = '=';
+const BASE64_PADDING: u8 = 64;
 
 pub fn hex2byte(hex: char) -> u8 {
     match hex {
@@ -26,130 +28,68 @@ pub fn hex2bytes(hex: &str) -> Vec<u8> {
 
 #[test]
 fn test_hex2bytes() {
+    assert_eq!(hex2bytes("42"), vec![0b01000010]);
     assert_eq!(hex2bytes("2af3"), vec![0b00101010, 0b11110011]);
 }
 
-pub fn hex2bits(hex: &str) -> String {
-    hex.chars()
-        .map(|c| match c.to_ascii_lowercase() {
-            '0' => "0000",
-            '1' => "0001",
-            '2' => "0010",
-            '3' => "0011",
-            '4' => "0100",
-            '5' => "0101",
-            '6' => "0110",
-            '7' => "0111",
-            '8' => "1000",
-            '9' => "1001",
-            'a' => "1010",
-            'b' => "1011",
-            'c' => "1100",
-            'd' => "1101",
-            'e' => "1110",
-            'f' => "1111",
-            _ => panic!("invalid hex: {}", c),
-        })
-        .collect::<Vec<_>>()
-        .join("")
+fn lsb(n: u8) -> u8 {
+    assert!(n <= 8);
+    (1 << n) - 1
 }
 
 #[test]
-pub fn test_hex2bits() {
-    assert_eq!(
-        &hex2bits("0123456789abcdef"),
-        "0000000100100011010001010110011110001001101010111100110111101111"
-    );
+fn test_lsb() {
+    assert_eq!(lsb(1), 0b00000001);
+    assert_eq!(lsb(2), 0b00000011);
+    assert_eq!(lsb(3), 0b00000111);
+    assert_eq!(lsb(4), 0b00001111);
+    assert_eq!(lsb(5), 0b00011111);
+    assert_eq!(lsb(6), 0b00111111);
+    assert_eq!(lsb(7), 0b01111111);
 }
 
-pub fn bits2u8(bits: &[char]) -> u8 {
-    assert!(bits.len() <= 8, format!("too many bits: {}", bits.len()));
-    let mut value: u8 = 0;
-    for b in bits {
-        value = value * 2
-            + match b {
-                '0' => 0,
-                '1' => 1,
-                _ => panic!("invalid bit: {}", b),
-            }
-    }
-    value
+fn msb(n: u8) -> u8 {
+    assert!(n <= 7);
+    !lsb(8 - n)
 }
 
 #[test]
-pub fn test_bits2u8() {
-    assert_eq!(bits2u8(&vec!['1', '0', '0', '1', '0', '1']), 37);
-}
-
-pub fn rpad<T: Clone>(values: Vec<T>, desired_length: usize, pad: T) -> Vec<T> {
-    let pad_amount = if values.len() >= desired_length {
-        0
-    } else {
-        desired_length - values.len()
-    };
-    values
-        .into_iter()
-        .chain(std::iter::repeat(pad).take(pad_amount))
-        .collect()
-}
-
-#[cfg(test)]
-mod rpad_tests {
-    use super::*;
-
-    #[test]
-    fn test_rpad_no_padding() {
-        assert_eq!(rpad(vec![1, 2, 3], 2, 0), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn test_rpad_padding() {
-        assert_eq!(rpad(vec![1, 2, 3], 4, 4), vec![1, 2, 3, 4]);
-    }
-}
-
-pub fn lpad<T: Clone>(values: Vec<T>, desired_length: usize, pad: T) -> Vec<T> {
-    let pad_amount = if values.len() >= desired_length {
-        0
-    } else {
-        desired_length - values.len()
-    };
-    std::iter::repeat(pad)
-        .take(pad_amount)
-        .chain(values.into_iter())
-        .collect()
-}
-
-#[cfg(test)]
-mod lpad_tests {
-    use super::*;
-
-    #[test]
-    fn test_lpad_no_padding() {
-        assert_eq!(lpad(vec![1, 2, 3], 2, 0), vec![1, 2, 3]);
-    }
-
-    #[test]
-    fn test_lpad_padding() {
-        assert_eq!(lpad(vec![1, 2, 3], 4, 0), vec![0, 1, 2, 3]);
-    }
+fn test_msb() {
+    assert_eq!(msb(1), 0b10000000);
+    assert_eq!(msb(2), 0b11000000);
+    assert_eq!(msb(3), 0b11100000);
+    assert_eq!(msb(4), 0b11110000);
+    assert_eq!(msb(5), 0b11111000);
+    assert_eq!(msb(6), 0b11111100);
+    assert_eq!(msb(7), 0b11111110);
 }
 
 pub fn hex2b64(hex: &str) -> String {
-    let mut without_padding = hex2bits(hex)
-        .chars()
-        .collect::<Vec<char>>()
-        .chunks(6)
-        .into_iter()
-        .map(|chunk| {
-            BASE64_TABLE
-                .get(bits2u8(&rpad(chunk.to_vec(), 6, '0')) as usize)
-                .unwrap()
+    hex2bytes(hex)
+        .chunks(3)
+        .flat_map(|chunk| {
+            let mut indices: Vec<u8> = vec![0, 0];
+            chunk.get(0).map(|a| {
+                indices[0] += (a & msb(6)) >> 2;
+                indices[1] += (a & lsb(2)) << 4;
+            });
+            chunk.get(1).map(|b| {
+                indices.push(0);
+                indices[1] += (b & msb(4)) >> 4;
+                indices[2] += (b & lsb(4)) << 2;
+            });
+            chunk.get(2).map(|c| {
+                indices.push(0);
+                indices[2] += (c & msb(2)) >> 6;
+                indices[3] += c & lsb(6);
+            });
+            indices.extend(std::iter::repeat(BASE64_PADDING).take(4 - indices.len()));
+            indices
+                .iter()
+                .map(|i| BASE64_TABLE[*i as usize])
+                .collect::<Vec<char>>()
         })
-        .collect::<String>();
-    without_padding.extend(std::iter::repeat(PADDING).take(without_padding.len() % 4));
-    let with_padding = without_padding;
-    with_padding
+        .collect()
 }
 
 #[cfg(test)]
@@ -171,97 +111,62 @@ mod hex2b64_tests {
     }
 }
 
-pub fn bits2hex(bits: &str) -> String {
-    assert!(bits.len() % 4 == 0);
-    bits.chars()
-        .collect::<Vec<char>>()
-        .chunks(4)
-        .map(|chunk| match bits2u8(chunk) {
-            0 => '0',
-            1 => '1',
-            2 => '2',
-            3 => '3',
-            4 => '4',
-            5 => '5',
-            6 => '6',
-            7 => '7',
-            8 => '8',
-            9 => '9',
-            10 => 'a',
-            11 => 'b',
-            12 => 'c',
-            13 => 'd',
-            14 => 'e',
-            15 => 'f',
-            _ => unreachable!(),
-        })
-        .collect()
-}
+// pub fn xor(b1: &str, b2: &str) -> String {
+//     b1.chars()
+//         .zip(b2.chars())
+//         .map(|(c1, c2)| if c1 == c2 { '0' } else { '1' })
+//         .collect::<String>()
+// }
 
-#[test]
-pub fn test_bits2hex() {
-    assert_eq!(
-        &bits2hex("0000000100100011010001010110011110001001101010111100110111101111"),
-        "0123456789abcdef"
-    );
-}
+// #[test]
+// pub fn test_xor() {
+//     let b1 = "1c0111001f010100061a024b53535009181c";
+//     let b2 = "686974207468652062756c6c277320657965";
+//     let expected = "746865206b696420646f6e277420706c6179";
+//     assert_eq!(bits2hex(&xor(&hex2bits(b1), &hex2bits(b2))), expected);
+// }
 
-pub fn xor(b1: &str, b2: &str) -> String {
-    b1.chars()
-        .zip(b2.chars())
-        .map(|(c1, c2)| if c1 == c2 { '0' } else { '1' })
-        .collect::<String>()
-}
+// pub fn u82bits(mut n: u8) -> String {
+//     let mut bits = String::new();
+//     while n > 0 {
+//         bits.push(if n % 2 == 1 { '1' } else { '0' });
+//         n /= 2;
+//     }
+//     bits.chars().rev().collect()
+// }
 
-#[test]
-pub fn test_xor() {
-    let b1 = "1c0111001f010100061a024b53535009181c";
-    let b2 = "686974207468652062756c6c277320657965";
-    let expected = "746865206b696420646f6e277420706c6179";
-    assert_eq!(bits2hex(&xor(&hex2bits(b1), &hex2bits(b2))), expected);
-}
+// #[test]
+// fn test_u82bits() {
+//     assert_eq!(u82bits(75), "1001011");
+// }
 
-pub fn u82bits(mut n: u8) -> String {
-    let mut bits = String::new();
-    while n > 0 {
-        bits.push(if n % 2 == 1 { '1' } else { '0' });
-        n /= 2;
-    }
-    bits.chars().rev().collect()
-}
+// pub fn str2bits(string: &str) -> String {
+//     string
+//         .chars()
+//         .flat_map(|c| lpad(u82bits(c as u8).chars().collect::<Vec<char>>(), 8, '0'))
+//         .collect()
+// }
 
-#[test]
-fn test_u82bits() {
-    assert_eq!(u82bits(75), "1001011");
-}
+// #[test]
+// fn test_str2bits() {
+//     let string = "hello world";
+//     let expected =
+//         "0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100";
+//     assert_eq!(str2bits(&string), expected);
+// }
 
-pub fn str2bits(string: &str) -> String {
-    string
-        .chars()
-        .flat_map(|c| lpad(u82bits(c as u8).chars().collect::<Vec<char>>(), 8, '0'))
-        .collect()
-}
+// pub fn bits2str(bits: &str) -> String {
+//     bits.chars()
+//         .collect::<Vec<char>>()
+//         .chunks(8)
+//         .map(|chunk| char::from(bits2u8(chunk)))
+//         .collect()
+// }
 
-#[test]
-fn test_str2bits() {
-    let string = "hello world";
-    let expected =
-        "0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100";
-    assert_eq!(str2bits(&string), expected);
-}
-
-pub fn bits2str(bits: &str) -> String {
-    bits.chars()
-        .collect::<Vec<char>>()
-        .chunks(8)
-        .map(|chunk| char::from(bits2u8(chunk)))
-        .collect()
-}
-
-#[test]
-fn test_bits2str() {
-    let bits =
-        "0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100";
-    let expected = "hello world";
-    assert_eq!(bits2str(&bits), expected);
-}
+// #[test]
+// fn test_bits2str() {
+//     let bits =
+//         "0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100";
+//     let expected = "hello world";
+//     assert_eq!(bits2str(&bits), expected);
+// }

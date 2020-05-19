@@ -132,7 +132,7 @@ fn test_bytes2hex() {
     assert_eq!(bytes2hex(vec![0b00101010, 0b11110011]), "2af3");
 }
 
-pub fn xor(bytes1: Vec<u8>, bytes2: Vec<u8>) -> Vec<u8> {
+pub fn xor(bytes1: &[u8], bytes2: &[u8]) -> Vec<u8> {
     bytes1
         .iter()
         .zip(bytes2.iter())
@@ -145,27 +145,27 @@ pub fn test_xor() {
     let hex1 = "1c0111001f010100061a024b53535009181c";
     let hex2 = "686974207468652062756c6c277320657965";
     let expected = "746865206b696420646f6e277420706c6179";
-    assert_eq!(bytes2hex(xor(hex2bytes(hex1), hex2bytes(hex2))), expected);
+    assert_eq!(bytes2hex(xor(&hex2bytes(hex1), &hex2bytes(hex2))), expected);
 }
 
-// TODO: str2bytes, bytes2str
+pub fn str2bytes(string: &str) -> Vec<u8> {
+    string.as_bytes().iter().map(|b| *b).collect()
+}
 
-// pub fn str2bytes(string: &str) -> Vec<u8> {
-//     Vec::new()
-// }
+#[test]
+fn test_str2bytes() {
+    let string = "hello world";
+    let expected = [104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
+    assert_eq!(str2bytes(&string), expected);
+}
 
-// #[test]
-// fn test_str2bytes() {
-//     let string = "hello world";
-//     assert_eq!(str2bits(&string), expected);
-// }
+pub fn bytes2str(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| char::from(*b)).collect()
+}
 
-// pub fn bytes2str(bytes: &[u8]) -> String {
-//     String::new()
-// }
-
-// #[test]
-// fn test_bytes2str() {
-//     let expected = "hello world";
-//     assert_eq!(bits2str(&bits), expected);
-// }
+#[test]
+fn test_bytes2str() {
+    let bytes = [104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100];
+    let expected = "hello world";
+    assert_eq!(bytes2str(&bytes), expected);
+}

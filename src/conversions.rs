@@ -111,62 +111,61 @@ mod hex2b64_tests {
     }
 }
 
-// pub fn xor(b1: &str, b2: &str) -> String {
-//     b1.chars()
-//         .zip(b2.chars())
-//         .map(|(c1, c2)| if c1 == c2 { '0' } else { '1' })
-//         .collect::<String>()
+pub fn nibble2hex(nibble: u8) -> char {
+    match nibble {
+        0..=9 => char::from(nibble + ('0' as u8)),
+        10..=15 => char::from(nibble - 10 + ('a' as u8)),
+        _ => panic!("nibble cannot be converted to hex: {}", nibble),
+    }
+}
+
+pub fn bytes2hex(bytes: Vec<u8>) -> String {
+    bytes
+        .iter()
+        .flat_map(|b| vec![nibble2hex((b & msb(4)) >> 4), nibble2hex(b & lsb(4))])
+        .collect()
+}
+
+#[test]
+fn test_bytes2hex() {
+    assert_eq!(bytes2hex(vec![0b01000010]), "42");
+    assert_eq!(bytes2hex(vec![0b00101010, 0b11110011]), "2af3");
+}
+
+pub fn xor(bytes1: Vec<u8>, bytes2: Vec<u8>) -> Vec<u8> {
+    bytes1
+        .iter()
+        .zip(bytes2.iter())
+        .map(|(a, b)| a ^ b)
+        .collect()
+}
+
+#[test]
+pub fn test_xor() {
+    let hex1 = "1c0111001f010100061a024b53535009181c";
+    let hex2 = "686974207468652062756c6c277320657965";
+    let expected = "746865206b696420646f6e277420706c6179";
+    assert_eq!(bytes2hex(xor(hex2bytes(hex1), hex2bytes(hex2))), expected);
+}
+
+// TODO: str2bytes, bytes2str
+
+// pub fn str2bytes(string: &str) -> Vec<u8> {
+//     Vec::new()
 // }
 
 // #[test]
-// pub fn test_xor() {
-//     let b1 = "1c0111001f010100061a024b53535009181c";
-//     let b2 = "686974207468652062756c6c277320657965";
-//     let expected = "746865206b696420646f6e277420706c6179";
-//     assert_eq!(bits2hex(&xor(&hex2bits(b1), &hex2bits(b2))), expected);
-// }
-
-// pub fn u82bits(mut n: u8) -> String {
-//     let mut bits = String::new();
-//     while n > 0 {
-//         bits.push(if n % 2 == 1 { '1' } else { '0' });
-//         n /= 2;
-//     }
-//     bits.chars().rev().collect()
-// }
-
-// #[test]
-// fn test_u82bits() {
-//     assert_eq!(u82bits(75), "1001011");
-// }
-
-// pub fn str2bits(string: &str) -> String {
-//     string
-//         .chars()
-//         .flat_map(|c| lpad(u82bits(c as u8).chars().collect::<Vec<char>>(), 8, '0'))
-//         .collect()
-// }
-
-// #[test]
-// fn test_str2bits() {
+// fn test_str2bytes() {
 //     let string = "hello world";
-//     let expected =
-//         "0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100";
 //     assert_eq!(str2bits(&string), expected);
 // }
 
-// pub fn bits2str(bits: &str) -> String {
-//     bits.chars()
-//         .collect::<Vec<char>>()
-//         .chunks(8)
-//         .map(|chunk| char::from(bits2u8(chunk)))
-//         .collect()
+// pub fn bytes2str(bytes: &[u8]) -> String {
+//     String::new()
 // }
 
 // #[test]
-// fn test_bits2str() {
-//     let bits =
-//         "0110100001100101011011000110110001101111001000000111011101101111011100100110110001100100";
+// fn test_bytes2str() {
 //     let expected = "hello world";
 //     assert_eq!(bits2str(&bits), expected);
 // }
